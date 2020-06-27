@@ -28,7 +28,10 @@ games.set('1', { status: 0, numPlayers: 0, curRest: null, restaurants: ["Shahs",
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json()) // for parsing application/json
 server.listen(3000);
- 
+var cors = require('cors');
+
+// use it before all route definitions
+app.use(cors({origin: 'http://localhost:8080'})); 
 //////////////////////////////////////////////
 /////////////// HTTP Functions ///////////////
 //////////////////////////////////////////////
@@ -68,7 +71,7 @@ app.post("/newGame", (req, resp) =>
     });
 });
 
-
+// Method for getting yelp autocomplete
 app.get("/autocomplete", (req, resp) => {
 
   const url = `http://api.yelp.com/v3/autocomplete?text=${req.query.keyword}`
@@ -89,8 +92,8 @@ app.get("/autocomplete", (req, resp) => {
   });
 });
 
+// Method to get full reviews from yelp
 app.get("/reviews", (req, resp) => {
-  console.log("here")
   axios.get(
     "https://api.yelp.com/v3/businesses/" + req.query.id + "/reviews",
     {
@@ -109,7 +112,16 @@ app.get("/reviews", (req, resp) => {
   
 });
 
-
+app.get("/checkGame", (req, resp) => {
+  
+  let game = games.get(req.query.joinCode);
+  if (game == undefined) {
+    resp.status(404).send("Not Found");
+  } else {
+    resp.status(200).send("OK");
+  }
+  
+});
 //////////////////////////////////////////////
 ///////////// WebSocket Functions ////////////
 //////////////////////////////////////////////
@@ -130,7 +142,7 @@ io.sockets.on("connection", function(socket)
     // Add the player to the game lobby
     ++game.numPlayers;
     socket.join(joinCode); 
-    io.in(joinCode).emit('joinedGame');
+    io.in(joinCode).emit('joinedGame', {numPlayers: game.numPlayers});
   });
   
   // Emit this event to start the game
@@ -204,7 +216,7 @@ io.sockets.on("connection", function(socket)
       // otherwise, if winner != null, end the game
       else {
         io.in(joinCode).emit("endedGame", winner);
-        console.log("hefdsare");
+        console.log(winner);
         game.status = 2;
       }
     }
