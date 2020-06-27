@@ -1,3 +1,3 @@
-# Vue JS
-We used vuejs, but glitch kept trying to add the file into the "assets" folder, so if you want to see those, we made
-a seperate glitch: https://glitch.com/edit/#!/join/03e728f6-1876-4290-b521-61400906e78a
+# Restaurant Tinder
+Using VueJs and NodeJs, I built a site that helps friends coordinate and decide what they want to eat. Just enter a Food Category (or don't), and your location,
+and Restaurant Tinder will let you and friends vote on nearby restaurants.
