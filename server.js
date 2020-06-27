@@ -1,45 +1,31 @@
 //////////////////////////////////////////////
 ////////////// Global Variables //////////////
 //////////////////////////////////////////////
-
 const express = require("express");
 const app = express();
-var http = require("http");
-var server = http.createServer(app);
-var io = require("socket.io").listen(server);
+const http = require("http");
+const server = http.createServer(app);
+const io = require("socket.io").listen(server);
 const axios = require("axios");
-var path = require("path");
-
+const path = require("path");
+const history = require("connect-history-api-fallback");
 
 // Games hold all current games on the server. 
 // Each game object contains a "status".
 // status=0: Game is in the lobby
 // status=1: Game is currently playing
 // status=2: Game has ended
-
 var games = new Map();
-games.set('0', { status: 0, numPlayers: 0, curRest: null, restaurants: ["Pizza Hut", "Burger King"] }); //TODO: remove after
-games.set('1', { status: 0, numPlayers: 0, curRest: null, restaurants: ["Shahs", "Taco Bell", "3", "4"] });
-
 //////////////////////////////////////////////
 /////////////////// Config ///////////////////
 //////////////////////////////////////////////
-
+app.use(history());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json()) // for parsing application/json
-server.listen(3000);
-var cors = require('cors');
-
-// use it before all route definitions
-app.use(cors({origin: 'http://localhost:8080'})); 
+server.listen(8080);
 //////////////////////////////////////////////
 /////////////// HTTP Functions ///////////////
 //////////////////////////////////////////////
-app.get("/", (req,resp) => {
-  resp.sendFile(__dirname + "/index.html");
-});
-
-
 // To create a new game, make POST request to /newGame, and game will now be in gamesInLobby
 app.post("/newGame", (req, resp) => 
 {  
@@ -67,13 +53,13 @@ app.post("/newGame", (req, resp) =>
       }
     })
     .catch(err => {
-      console.log(err);
+      resp.send(err);
     });
 });
 
 // Method for getting yelp autocomplete
-app.get("/autocomplete", (req, resp) => {
-
+app.get("/autocomplete", (req, resp) => 
+{
   const url = `http://api.yelp.com/v3/autocomplete?text=${req.query.keyword}`
   axios.get(url,
       { 
@@ -84,16 +70,16 @@ app.get("/autocomplete", (req, resp) => {
       }
   )
   .then(apiResp => {
-    //  console.log(apiResp.data.terms)
       resp.send(apiResp.data.terms)
   })
   .catch(err => {
-      console.log(err);
+      resp.send(err);
   });
 });
 
 // Method to get full reviews from yelp
-app.get("/reviews", (req, resp) => {
+app.get("/reviews", (req, resp) => 
+{
   axios.get(
     "https://api.yelp.com/v3/businesses/" + req.query.id + "/reviews",
     {
@@ -106,29 +92,29 @@ app.get("/reviews", (req, resp) => {
     resp.send(apiResp.data.reviews);
   })
   .catch(err => {
-      console.log(err);
       resp.send(err);
   });
-  
 });
 
-app.get("/checkGame", (req, resp) => {
-  
+app.get("/checkGame", (req, resp) => 
+{  
   let game = games.get(req.query.joinCode);
   if (game == undefined) {
     resp.status(404).send("Not Found");
   } else {
     resp.status(200).send("OK");
   }
-  
+});
+
+app.get(/.*/,(req,res)=>
+  {
+    res.sendFile(path.resolve(__dirname,'public/index.html'));
 });
 //////////////////////////////////////////////
 ///////////// WebSocket Functions ////////////
 //////////////////////////////////////////////
-
 io.sockets.on("connection", function(socket) 
-{  
-  //console.log(socket.handshake.query["joinCode"]);
+{
   // Emit this event to join a game
   socket.on("joinGame", function() 
   {
@@ -145,6 +131,25 @@ io.sockets.on("connection", function(socket)
     io.in(joinCode).emit('joinedGame', {numPlayers: game.numPlayers});
   });
   
+  socket.on("disconnect", function() 
+  {
+    let joinCode = verifyCode(socket, -1);
+    if (joinCode < 0) {
+      return;
+    }
+
+    let game = games.get(joinCode);
+    --game.numPlayers;
+
+    io.in(joinCode).emit('joinedGame', {numPlayers: game.numPlayers});
+    if (game.numPlayers == 0) {
+      games.delete(joinCode);
+    }
+  });
+  socket.on("error", function(socket){
+    socket.disconnect();
+  });
+
   // Emit this event to start the game
   // the player is in the "lobby" for
   socket.on("startGame", function() 
@@ -168,7 +173,6 @@ io.sockets.on("connection", function(socket)
     getRestaurant(game.restaurants[0].id).then((firstRest) => {
       io.in(joinCode).emit("startedGame", {restaurant: firstRest});     
     });
-
   });
   
   // Emit this event with a ok=true if 
@@ -189,8 +193,6 @@ io.sockets.on("connection", function(socket)
     
     // If everyone voted and ...
     if (game.numVotes % game.numPlayers == 0) {
-      debug(game);
-      
       // if there was no winner, continue playing
       let winner = checkWin(game);
       if (winner == null) {
@@ -198,7 +200,6 @@ io.sockets.on("connection", function(socket)
         // If this restaurant had > 0 votes, add back
         let curRest = game.restaurants.shift();
         if (game.votes[game.round] != 0 ) {
-         // console.log("CurRest: " + curRest);
           game.restaurants.push(curRest);
         }
         
@@ -206,21 +207,16 @@ io.sockets.on("connection", function(socket)
         ++game.round;
         game.votes.push(0);
         
-        //console.log(game.restaurants[0].id);
         getRestaurant(game.restaurants[0].id).then((nextRest) => {
           io.in(joinCode).emit("nextChoice", {restaurant: nextRest});     
-        });
-     
-        
+        }); 
       }
       // otherwise, if winner != null, end the game
       else {
         io.in(joinCode).emit("endedGame", winner);
-        console.log(winner);
         game.status = 2;
       }
     }
-    
   }); 
 });
 
@@ -246,16 +242,23 @@ async function getRestaurant(id)
     })
     .then(apiResp => {
     if (apiResp) {
-     
       return apiResp.data;
     }
-  });
-  
+  });  
 }
 
 function verifyCode(socket, status) 
 {
-  let joinCode = socket.handshake.query["joinCode"];
+  if (socket === void(0)) {
+    return -1;
+  }
+  // If server gets reset during game, and player attempts to reconnect
+  if (socket.handshake === void(0)) { 
+
+    return -1;
+  }
+
+  let joinCode = socket.handshake.query.joinCode;
   let game = games.get(joinCode);
  
   // If the game wasn't found
@@ -266,7 +269,7 @@ function verifyCode(socket, status)
   } 
   
   // If the game's status code doesn't match
-  if (game.status != status) {
+  if (game.status != status && status != -1) {
     switch(game.status) {
       case 0:
         socket.emit("myerror", "This game is still in the lobby");
@@ -306,6 +309,5 @@ function checkWin(game)
       let restaurant = {"name": "You guys are picky af"};
       winner = restaurant;
   }
-  
   return winner;
 }

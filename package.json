@@ -10,10 +10,11 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.17.1",
-    "socket.io": "",
     "axios": "^0.19.2",
-    "cors": "^2.8.5"
+    "connect-history-api-fallback": "^1.6.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "socket.io": ""
   },
   "engines": {
     "node": "12.x"
