@@ -40,7 +40,7 @@ app.post("/newGame", (req, resp) =>
     "&limit=10",
     {
       headers: {
-        Authorization: "Bearer 7h6mE0vGyjIgFRrJvTF5xuru11IELRJ0tLTSTvCprJ706dsage7dot2a3-Ih0QNv9OOZoqtPNVXtery8EziMKKs5_Z3OnUx8vLFBnVOdtHhZ73wGc0KYPfpx4jXxXnYx"
+         Authorization: "Bearer " + process.env.YELP_TOKEN
       }
     })
     .then(apiResp => {
@@ -64,8 +64,7 @@ app.get("/autocomplete", (req, resp) =>
   axios.get(url,
       { 
         headers: {
-          Authorization:
-            "Bearer 7h6mE0vGyjIgFRrJvTF5xuru11IELRJ0tLTSTvCprJ706dsage7dot2a3-Ih0QNv9OOZoqtPNVXtery8EziMKKs5_Z3OnUx8vLFBnVOdtHhZ73wGc0KYPfpx4jXxXnYx"
+            Authorization: "Bearer " + process.env.YELP_TOKEN
         }
       }
   )
@@ -84,7 +83,7 @@ app.get("/reviews", (req, resp) =>
     "https://api.yelp.com/v3/businesses/" + req.query.id + "/reviews",
     {
       headers: {
-          Authorization: "Bearer 7h6mE0vGyjIgFRrJvTF5xuru11IELRJ0tLTSTvCprJ706dsage7dot2a3-Ih0QNv9OOZoqtPNVXtery8EziMKKs5_Z3OnUx8vLFBnVOdtHhZ73wGc0KYPfpx4jXxXnYx"
+          Authorization: "Bearer " + process.env.YELP_TOKEN
       }
     }
   )
@@ -237,7 +236,7 @@ async function getRestaurant(id)
     "https://api.yelp.com/v3/businesses/" + id,
     {
       headers: {
-        Authorization: "Bearer 7h6mE0vGyjIgFRrJvTF5xuru11IELRJ0tLTSTvCprJ706dsage7dot2a3-Ih0QNv9OOZoqtPNVXtery8EziMKKs5_Z3OnUx8vLFBnVOdtHhZ73wGc0KYPfpx4jXxXnYx"
+         Authorization: "Bearer " + process.env.YELP_TOKEN
       }
     })
     .then(apiResp => {

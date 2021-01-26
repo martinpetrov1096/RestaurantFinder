@@ -1,7 +1,7 @@
 FROM node:12
 
 # Create app directory
-WORKDIR /vol0/Appdata/RestaurantTinder/RestaurantFinder/
+WORKDIR /app
 
 # Install app dependencies
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
@@ -17,4 +17,4 @@ COPY . .
 
 
 EXPOSE 8080
-CMD [ "node", "server.js" ]
+CMD [ "npm", "start" ]
